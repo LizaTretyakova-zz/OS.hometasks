@@ -15,7 +15,7 @@
 typedef void (*int_handler) (void);
 
 void handler(void);
-void handle_pit_interrupt(void);
+void pit_handler(void);
 
 void init_entry(struct IDTEntry* single_entry, uint64_t offset) {
 	//uint64_t offset = (uint64_t) handler;
@@ -35,7 +35,7 @@ void setup_idt() {
 	for(int i = 0; i < FIRST_PART; ++i) {
 		init_entry(idt + i, (uint64_t)handler);
 	}
-	init_entry(idt + SECOND_PART, (uint64_t)handle_pit_interrupt);
+	init_entry(idt + SECOND_PART, (uint64_t)pit_handler);
 	for(int i = SECOND_PART + 1; i < TABLE_SIZE; ++i) {
 		init_entry(idt + i, (uint64_t)handler);
 	}

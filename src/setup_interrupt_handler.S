@@ -1,5 +1,6 @@
 	.global handler
 	.global send_interrupt
+	.global pit_handler
 	.extern handle_pit_interrupt
 
 handler:

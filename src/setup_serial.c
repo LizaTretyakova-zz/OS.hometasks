@@ -12,6 +12,9 @@ void setup_serial() {
 
 void println(char* string) {
 	for(int i = 0; string[i] != 0; ++i) {
+		while(!((in8(0x3f + 5)) & (1 << 5))) {
+			continue;
+		}
 		out8(0x3f8 + 0, string[i]);
 	}
 	out8(0x3f8 + 0, '\n');
