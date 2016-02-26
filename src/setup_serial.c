@@ -11,11 +11,12 @@ void setup_serial() {
 }
 
 void println(char* string) {
-	for(int i = 0; string[i] != 0; ++i) {
-		while(!((in8(0x3f + 5)) & (1 << 5))) {
-			continue;
+	int i = 0;
+	while(string[i] != 0) {
+		if((in8(0x3f + 5)) & (1 << 5)) {
+			out8(0x3f8 + 0, string[i]);
+			++i;
 		}
-		out8(0x3f8 + 0, string[i]);
 	}
 	while(!((in8(0x3f8 + 5)) & (1 << 5))) {
 		continue;
