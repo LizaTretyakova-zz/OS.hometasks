@@ -17,5 +17,8 @@ void println(char* string) {
 		}
 		out8(0x3f8 + 0, string[i]);
 	}
+	while(!((in8(0x3f8 + 5)) & (1 << 5))) {
+		continue;
+	}
 	out8(0x3f8 + 0, '\n');
 }
