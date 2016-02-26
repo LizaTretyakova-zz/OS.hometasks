@@ -6,7 +6,13 @@ void setup_serial() {
 	out8(0x3f8 + 0, 0x18); // Just a valid value for the coefficient
 	out8(0x3f8 + 1, 0x00);	
 	
-	out8(0x3f8 + 3, 0x80);//0b00000001); // Break is not enabled
+	out8(0x3f8 + 3, 3);
 	out8(0x3f8 + 1, 0x00);//0b00000000); // Interrupt Enable Register
+}
 
+void println(char* string) {
+	for(int i = 0; string[i] != 0; ++i) {
+		out8(0x3f8 + 0, string[i]);
+	}
+	out8(0x3f8 + 0, '\n');
 }
