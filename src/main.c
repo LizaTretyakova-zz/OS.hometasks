@@ -3,6 +3,7 @@
 #include "setup_serial.h"
 #include "setup_idt.h"
 #include "setup_pit.h"
+#include "mmap.h"
 
 void main(void)
 { 
@@ -24,6 +25,9 @@ void main(void)
 	println("Initialized pit...");
 
 	__asm__("sti");
+	
+	get_mmap();
+    print_mmap();
 
 	while (1); 
 }

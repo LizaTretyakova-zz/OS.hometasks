@@ -10,7 +10,7 @@ ASM := bootstrap.S videomem.S setup_interrupt_handler.S
 AOBJ:= $(ASM:.S=.o)
 ADEP:= $(ASM:.S=.d)
 
-SRC := main.c setup_serial.c setup_pic.c setup_idt.c setup_pit.c
+SRC := main.c setup_serial.c setup_pic.c setup_idt.c setup_pit.c get_mmap.c
 OBJ := $(AOBJ) $(SRC:.c=.o)
 DEP := $(ADEP) $(SRC:.c=.d)
 
