@@ -10,7 +10,7 @@ void setup_serial() {
 	out8(0x3f8 + 1, 0x00);//0b00000000); // Interrupt Enable Register
 }
 
-void println(char* string) {
+void print(char* string) {
 	int i = 0;
 	while(string[i] != 0) {
 		if((in8(0x3f + 5)) & (1 << 5)) {
@@ -21,5 +21,31 @@ void println(char* string) {
 	while(!((in8(0x3f8 + 5)) & (1 << 5))) {
 		continue;
 	}
-	out8(0x3f8 + 0, '\n');
+//	out8(0x3f8 + 0, '\n');
+}
+
+void println(char* string) {
+    print(string);
+    print("\n");
+}
+
+void print_llu(uint64_t x) {
+    if(x == 0) {
+        print("0");
+        return;
+    }
+
+    char str[30];
+    char res[30];
+    int i = 0;
+    while(x > 0) {
+        str[i] = x % 10 + '0';
+        x /= 10;
+        ++i;
+    }
+    for(int j = 0; j < i; j++) {
+        res[j] = str[i - j - 1];
+    }
+    res[i] = 0;
+    print(res);
 }

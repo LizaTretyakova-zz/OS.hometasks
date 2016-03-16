@@ -11,7 +11,7 @@
 #define DIV_HIGH_BYTE 0x00
 
 void handle_pit_interrupt() {
-	println("Meow :)");
+	//println("Meow :)");
 	eoi();
 }
 
