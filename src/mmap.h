@@ -1,5 +1,5 @@
 #ifndef _MMAP_H_
-#define __MMAP_H_
+#define _MMAP_H_
 
 #define MAX_SIZE 32
 
@@ -9,7 +9,7 @@ struct multiboot_aout_symbol_table {
        uint32_t strsize;
        uint32_t addr;
        uint32_t reserved;
-};
+} __attribute__((packed));
 typedef struct multiboot_aout_symbol_table multiboot_aout_symbol_table_t;
      
 /* The section header table for ELF. */
@@ -18,7 +18,7 @@ struct multiboot_elf_section_header_table {
        uint32_t size;
        uint32_t addr;
        uint32_t shndx;
-};
+} __attribute__((packed));
 typedef struct multiboot_elf_section_header_table multiboot_elf_section_header_table_t;
      
 
@@ -69,7 +69,7 @@ struct multiboot_info {
        uint16_t vbe_interface_seg;
        uint16_t vbe_interface_off;
        uint16_t vbe_interface_len;
-};
+} __attribute__((packed));
 typedef struct multiboot_info multiboot_info_t;
 
 struct multiboot_mmap_entry {
@@ -81,19 +81,21 @@ struct multiboot_mmap_entry {
      #define MULTIBOOT_MEMORY_RESERVED               2
        uint32_t type;
 } __attribute__((packed));
-typedef struct multiboot_mmap_entry mmap_entry;
+typedef struct multiboot_mmap_entry mboot_mmap_entry;
 
-/*
-struct mmap_entry {
-    uint64_t base_addr;
-    uint64_t length;
+struct mmap_entry_t {
+    uint64_t addr;
+    uint64_t len;
     uint32_t type;
 };
-*/
+typedef struct mmap_entry_t mmap_entry;
 
 void get_mmap();
 void print_mmap();
+void halt();
+void assert_true(int , char* );
 
+//extern mboot_mmap_entry mboot_mmap[MAX_SIZE];
 extern mmap_entry mmap[MAX_SIZE];
 extern uint32_t mmap_size;
 

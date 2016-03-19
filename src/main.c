@@ -4,6 +4,7 @@
 #include "setup_idt.h"
 #include "setup_pit.h"
 #include "mmap.h"
+#include "buddy_alloc.h"
 
 void main(void)
 { 
@@ -26,8 +27,7 @@ void main(void)
 
 	__asm__("sti");
 	
-	get_mmap();
-    print_mmap();
+    init_buddy();
 
 	while (1); 
 }

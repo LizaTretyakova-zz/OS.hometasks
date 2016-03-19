@@ -10,7 +10,7 @@ ASM := bootstrap.S videomem.S setup_interrupt_handler.S
 AOBJ:= $(ASM:.S=.o)
 ADEP:= $(ASM:.S=.d)
 
-SRC := main.c setup_serial.c setup_pic.c setup_idt.c setup_pit.c get_mmap.c
+SRC := main.c setup_serial.c setup_pic.c setup_idt.c setup_pit.c get_mmap.c boot_alloc.c buddy_alloc.c
 OBJ := $(AOBJ) $(SRC:.c=.o)
 DEP := $(ADEP) $(SRC:.c=.d)
 
@@ -29,5 +29,5 @@ kernel: $(OBJ) kernel.ld
 
 .PHONY: clean
 clean:
-	rm -f kernel $(OBJ) $(DEP)
+	rm -f kernel $(OBJ) $(DEP) *~
 

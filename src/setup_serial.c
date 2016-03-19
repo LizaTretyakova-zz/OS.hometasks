@@ -49,3 +49,30 @@ void print_llu(uint64_t x) {
     res[i] = 0;
     print(res);
 }
+
+void print_llu_x(uint64_t x) {
+    print("0x");
+
+    if(x == 0) {
+        print("00");
+        return;
+    }
+
+    char str[30];
+    char res[30];
+    int i = 0;
+    while(x > 0) {
+        if(x % 16 < 10) {
+            str[i] = x % 16 + '0';
+        } else {
+            str[i] = x % 16 + 'a' - 10;
+        }
+        x /= 16;
+        ++i;
+    }
+    for(int j = 0; j < i; j++) {
+        res[j] = str[i - j - 1];
+    }
+    res[i] = 0;
+    print(res);
+}
