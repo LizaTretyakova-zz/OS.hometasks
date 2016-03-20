@@ -43,36 +43,43 @@ phys_t pd_to_addr(uint64_t pd) {
 }
 
 
-// does not deal with availability of the blocks AT ALL!!!
-void merge(uint64_t* pd, uint64_t* buddy, unsigned int new_lvl) {
-    descr_table[*pd].level = new_lvl;
-    descr_table[*buddy].level = new_lvl;
+void insert_to_level(unsigned int level, page_descr* pd) {
+    assert_true(heads + level != NULL, "heads[level] != NULL");
 
-    //page_descr* pd_prev = descr_table[*pd].prev;
-    //page_descr* buddy_next = descr_table[*buddy].next;
-//    They are invalid!!! Anyway!!!
-
-    // heads[i] will be a fictitious pointer, always existing
-//    assert_true(pd_prev != NULL, "pd_prev != NULL");
-    // next of pd_prev should be pd
-//    assert_true(pd_prev->next == descr_table + *pd, "pd_prev->next == descr_table + *pd");
-//    pd_prev->next = buddy_next;
-    //although next may be abscent
-//    if(buddy_next != NULL) {
-//        buddy_next->prev = pd_prev;
-//    }
-
-    page_descr* new_prev = heads + new_lvl;
-    assert_true(new_prev != NULL, "new_prev != NULL");
-    page_descr* new_next = heads[new_lvl].next;
+    page_descr* new_next = heads[level].next;
     // deal with prev
-    descr_table[*pd].prev = new_prev;
-    new_prev->next = descr_table + *pd;
+    pd->prev = heads + level;
+    heads[level].next = pd;
     // deal with next
-    descr_table[*pd].next = new_next;
+    pd->next = new_next;
     if(new_next != NULL) {
-        new_next->prev = descr_table + *pd;
+        new_next->prev = pd;
     }
+}
+
+
+// does not deal with availability of the blocks AT ALL!!!
+void merge(uint64_t pd, uint64_t buddy, unsigned int new_lvl) {
+    descr_table[pd].level = new_lvl;
+    descr_table[buddy].level = new_lvl;
+
+
+    page_descr* pd_prev = descr_table[pd].prev;
+    page_descr* buddy_next = descr_table[buddy].next;
+
+    //heads[i] will be a fictitious pointer, always existing
+    assert_true(pd_prev != NULL, "pd_prev != NULL");
+    // next of pd_prev should be pd
+    assert_true(pd_prev->next == descr_table + pd, "pd_prev->next == descr_table + *pd");
+
+    pd_prev->next = buddy_next;
+    // although next may be abscent
+    if(buddy_next != NULL) {
+        buddy_next->prev = pd_prev;
+    }
+
+
+    insert_to_level(new_lvl, descr_table + pd);
 }
 
 
@@ -81,7 +88,18 @@ uint64_t get_buddy(uint64_t pd, unsigned int lvl) {
 }
 
 
-void buddy_deallocate(uint64_t pd, unsigned int lvl) {
+void extract_from_level(unsigned int level, page_descr* pd) {
+    heads[level].next = pd->next;
+    if(pd->next != NULL) {
+        pd->next->prev = heads + level;
+    }
+}
+
+
+void buddy_deallocate(phys_t addr, unsigned int lvl) {
+    uint64_t pd = addr_to_pd(addr);
+
+    insert_to_level(lvl, descr_table + pd);
     descr_table[pd].is_free = PAGE_DESCRIPTOR_AVAILABLE;
     for(unsigned int i = lvl; i < MAX_SIZE - 1; ++i) {
         uint64_t buddy = get_buddy(pd, i);
@@ -89,7 +107,7 @@ void buddy_deallocate(uint64_t pd, unsigned int lvl) {
                 !(descr_table[buddy].is_free == PAGE_DESCRIPTOR_AVAILABLE && descr_table[buddy].level == i)) {
             return;
         }
-        merge(&pd, &buddy, i + 1);
+        merge(pd, buddy, i + 1);
     }
 }
 
@@ -100,7 +118,7 @@ uint64_t activate_available_mem() {
         if(mmap[i].type == MULTIBOOT_MEMORY_AVAILABLE) {
         // if we find a free part, we activate all contained pages
             for(unsigned int offset = 0; offset < mmap[i].len; offset += PAGE_SIZE) {
-                buddy_deallocate(addr_to_pd(mmap[i].addr + offset), 0);
+                buddy_deallocate(mmap[i].addr + offset, 0);
             }
         }
     }
@@ -131,58 +149,47 @@ void init_buddy() {
     page_descr* prev = heads + 0;
     for(unsigned int i = 0; i < dt_size; ++i) {
         set_page_descr(descr_table + i, i, PAGE_DESCRIPTOR_RESERVED, 0, prev, NULL);
-
-        assert_true(prev != NULL, "prev != NULL");
-        prev->next = descr_table + i;
-        prev = descr_table + i;
     }
 
     //initialize heads
-    set_page_descr(heads + 0, 0, PAGE_DESCRIPTOR_FICT, 0, NULL, descr_table + 0);
-    for(int i = 1; i < MAX_SIZE; ++i) {
+    for(int i = 0; i < MAX_SIZE; ++i) {
         set_page_descr(heads + i, 0, PAGE_DESCRIPTOR_FICT, i, NULL, NULL);
     }
 
     //initialize actually available descriptors
     activate_available_mem();
 
-    print_pages();
+    //print_pages();
 }
 
 
 // the user programmer should provide the correct level
 // correct === the current level is not empty, while the level below is
 void push_down(unsigned int level) {
-    assert_true((heads[level]->next != NULL), "push_down first contract");
+    assert_true((heads[level].next != NULL), "push_down first contract");
     assert_true((level > 0), "push_down second contract");
-    assert_true((heads[level - 1]->next == NULL), "push_down third contract");
+    assert_true((heads[level - 1].next == NULL), "push_down third contract");
 
-    uint64_t pd_id =  heads[level]->next->pd_id;
+    uint64_t pd_id =  heads[level].next->pd_id;
     uint64_t buddy_id = get_buddy(pd_id, level - 1);
-    page_descr* pd = descr_table[pd_id];
-    page_descr* buddy = descr_table[buddy_id];
+    page_descr* pd = descr_table + pd_id;
+    page_descr* buddy = descr_table + buddy_id;
 
-    heads[level]->next = pd->next;
-    if(pd->next != NULL) {
-        pd->next->prev = heads[level];
-    }
+    extract_from_level(level, pd);
 
     // it is significant that previous level is empty
-    heads[level - 1]->next = pd;
-    set_page_descr(pd, pd->pd_id, PAGE_DESCRIPTOR_AVAILABLE, level - 1, heads[level - 1], buddy);
+    heads[level - 1].next = pd;
+    set_page_descr(pd, pd->pd_id, PAGE_DESCRIPTOR_AVAILABLE, level - 1, heads + (level - 1), buddy);
     set_page_descr(buddy, buddy->pd_id, PAGE_DESCRIPTOR_AVAILABLE, level - 1, pd, NULL);
 }
 
 
 // contract: level is not empty
 phys_t extract_mem(unsigned int level) {
-    assert_true((heads[level]->next != NULL), "extract_mem contract");
+    assert_true((heads[level].next != NULL), "extract_mem contract");
 
-    page_descr* pd = heads[level]->next;
-    heads[level]->next = pd->next;
-    if(pd->next != NULL) {
-        pd->next->prev = heads[level];
-    }
+    page_descr* pd = heads[level].next;
+    extract_from_level(level, pd);
     pd->is_free = PAGE_DESCRIPTOR_RESERVED;
     return pd_to_addr(pd->pd_id);
 }
@@ -190,7 +197,7 @@ phys_t extract_mem(unsigned int level) {
 
 phys_t buddy_allocate(unsigned int lvl) {
     unsigned int k = lvl;
-    while(k < MAX_SIZE && heads[k]->next == NULL) {
+    while(k < MAX_SIZE && heads[k].next == NULL) {
         ++k;
     }
     while(k > lvl) {
@@ -239,7 +246,7 @@ void print_level_var(int i, int print_reserved) {
         }
         cur = cur->next;
     }
-    println("\n");
+    println("");
 }
 
 void print_level(int i) {
@@ -247,7 +254,13 @@ void print_level(int i) {
 }
 
 void print_pages() {
-    for(int i = MAX_SIZE - 1; i > 0; --i) {
+    for(int i = MAX_SIZE - 1; i >= 0; --i) {
+        print_level(i);
+    }
+}
+
+void print_less_pages(int bound) {
+    for(int i = bound; i >= 0; --i) {
         print_level(i);
     }
 }
@@ -257,6 +270,35 @@ void print_available_pages() {
         print_level_var(i, 0);
     }
 }
+
+int is_free(uint64_t pd) {
+    uint64_t buddy = get_buddy(pd, descr_table[pd].level);
+    while(descr_table[buddy].level > descr_table[pd].level) {
+        pd = buddy;
+    }
+    return (descr_table[pd].is_free == PAGE_DESCRIPTOR_AVAILABLE);
+//            && (descr_table[buddy].level != descr_table[pd].level
+//                || descr_table[buddy].is_free == PAGE_DESCRIPTOR_AVAILABLE));
+}
+
+void print_pd_map() {
+    unsigned int i = 0;
+    while(i < dt_size) {
+        if(is_free(i)) {
+            print("[");
+            print_llu(i);
+            print(" : ");
+            while(i < dt_size && is_free(i)) {
+                ++i;
+            }
+            print_llu(i);
+            print(")");
+        }
+        ++i;
+    }
+    println("");
+}
+
 
 
 void debug_print_buddy_and_pd_lots(uint64_t pd, uint64_t buddy, unsigned int i) {
